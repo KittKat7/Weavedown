@@ -1,6 +1,4 @@
 import os, re
-import markdown
-
 
 class Generator:
 	"""
@@ -19,8 +17,6 @@ class Generator:
 		self.parsedFiles: list[str]
 		
 		self.files = self.__getFiles(self.dir)
-		print(self.dirs)
-		print(self.files)
 	#__init__
 
 	def __getFiles(self, direct: str) -> list[str]:
@@ -83,11 +79,12 @@ class Generator:
 		files: list[str] = list.copy(self.files)
 		while len(files) > 0:
 			filestr: str = os.path.join(self.outDir, files.pop()[len(self.dir) + 1:])
+			if filestr.split(".")[len(filestr.split("."))-1] not in ["mdhtml", "html", "md", "css", "js", "txt"]:
+				continue
 			if filestr[-7:] == ".mdhtml":
-				print("=====")
-				print(filestr)
 				filestr = filestr[:-7] + ".html"
-				print(filestr)
+
+			print("Checking " + filestr + " for imports")
 
 			with open(filestr, "r") as file:
 				data = file.read()
