@@ -1,4 +1,6 @@
-import os
+import os, re
+import markdown
+
 
 class Generator:
 	"""
@@ -17,11 +19,13 @@ class Generator:
 		self.parsedFiles: list[str]
 		
 		self.files = self.__getFiles(self.dir)
+		print(self.dirs)
+		print(self.files)
 	#__init__
 
 	def __getFiles(self, direct: str) -> list[str]:
 		"""
-		
+		Returns a list of file names in the given directory
 		"""
 		files: list[str] = []
 		directory = os.scandir(direct)
@@ -36,14 +40,12 @@ class Generator:
 		return files
 	#__getFiles
 
-	def generate(self):
+	def generateDirectories(self):
 		"""
-		Goes through all files, and generate output files in the output directory
 		"""
-
 		while len(self.dirs) > 0:
-			if not os.path.exists(os.path.join(self.outDir, self.dirs[0])):
-				os.makedirs(os.path.join(self.outDir, self.dirs[0]))
+			if not os.path.exists(os.path.join(self.outDir, self.dirs[0][len(self.dir) + 1:])):
+				os.makedirs(os.path.join(self.outDir, self.dirs[0][len(self.dir) + 1:]))
 			self.dirs.remove(self.dirs[0])
 		#while
 
@@ -54,145 +56,60 @@ class Generator:
 		# if the output directory does not exist, make it
 		if not os.path.exists(self.outDir):
 			os.makedirs(self.outDir)
+	#generateDirectories
 
-		while len(self.files) > 0:
-			self.__generateFile(0)
-		#while
-	#generate
+	def generateFiles(self):
+		"""
+		"""
+		files: list[str] = list.copy(self.files)
+		while len(files) > 0:
+			filestr: str = files.pop()
+			data: object
+			if filestr.split(".")[len(filestr.split("."))-1] in ["mdhtml"]:
+				with open(filestr, "r") as file:
+					data = file.read()
+				with open(os.path.join(self.outDir, filestr[len(self.dir) + 1:-7] + ".html"), "w") as file:
+					file.write("<!-- Compiled by WeaveDown -->\n" + data)
+			else:
+				with open(filestr, "rb") as file:
+					data = file.read()
+				with open(os.path.join(self.outDir, filestr[len(self.dir) + 1:]), "wb") as file:
+					file.write(data)
+	#generateFiles
 
-	def __generateFile(self, index: int):
+	def parseImports(self):
 		"""
-		Generate an output for the given file
 		"""
-		if self.files[index].split(".")[len(self.files[index].split("."))-1] not in ["html", "md"]:
-			data = None
-			with open(os.path.join(self.dir, self.files[index]), "rb") as file:
+		files: list[str] = list.copy(self.files)
+		while len(files) > 0:
+			filestr: str = os.path.join(self.outDir, files.pop()[len(self.dir) + 1:])
+			if filestr[-7:] == ".mdhtml":
+				print("=====")
+				print(filestr)
+				filestr = filestr[:-7] + ".html"
+				print(filestr)
+
+			with open(filestr, "r") as file:
 				data = file.read()
-			with open(os.path.join(self.outDir, self.files[index]), "wb") as file:
+				while re.search(r'!\[.*?\]\((.*?)\)', data) is not None:
+					search: object = re.search(r'!\[.*?\]\((.*?)\)', data)
+					path: str = search.group(1) # type: ignore
+					if path.startswith("./"):
+						path = os.path.join(self.outDir, path[2:])
+					if path[-7:] == ".mdhtml":
+						path = path[:-7] + ".html"
+
+					importedData: str
+					with open(path, "r") as imported:
+						importedData = imported.read()
+
+					data = re.sub(rf'!\[.*?\]\({re.escape(search.group(1))}\)', # type: ignore
+						"<!-- Imported by WeaveDown -->" + importedData + "<!-- End Import -->", data)
+
+					print(path)
+			
+			with open(filestr, "w") as file:
 				file.write(data)
-			self.files.remove(self.files[index])
-			return
 
-		filePath: str = self.files[index]
-		inputStr: str
-		outputStr: str
-
-
-		with open(os.path.join(self.dir, filePath), "r") as file:
-			inputStr = file.read()
-
-		parser: Parser = Parser(inputStr)
-		parser.tokenize()
-		parser.parse()
-
-		refs: list[str] = parser.getReferences()
-		refsReplace: list[str] = []
-		for ref in refs:
-			# if the required file has not been parsed, parse it
-			if ref not in self.parsedFiles:
-				self.__generateFile(self.files.index(ref))
-			#if
-
-			# read the file from the output and put it in the replacement reference file
-			with open(os.path.join(self.outDir, filePath), "w") as file:
-				refsReplace.append(file.read())
-			#with
-		#for
-
-		outputStr = parser.getOutput()
-
-		filePath = os.path.splitext(filePath)[0]+".html"
-
-		with open(os.path.join(self.outDir, filePath), "w") as file:
-			file.write(outputStr)
-
-		self.files.remove(self.files[index])
-	#__generateFile
-#Generator
-
-class Parser:
-	"""
-	The parser parses markdown and weavedown syntax
-	"""
-
-	__keywords: list[str] = [
-		"#","##","###","####","#####","######", # heading
-		"*","**","***",
-		"![", # embed
-	]
-
-	def __init__(self, inputStr: str):
-		"""
-		Constructor
-		Initiates the Parser with the inputStr
-		"""
-		self.__inputStr: str = inputStr
-		self.__outputStr: str = ""
-
-		self.__parts: list[str] = []
-		self.__indexsOfRefs: list[int] = []
-	#__init__
-
-	def tokenize(self):
-		"""
-		
-		"""
-		self.__tokens: list[list[str]] = []
-
-		newLine: bool = True
-		continueTo: str = ""
-
-		for c in self.__inputStr:
-			if continueTo == c:
-				continueTo = ""
-				continue
-			elif continueTo != "":
-				self.__tokens[len(self.__tokens) - 1][1] += c
-				continue
-			#if/elif
-
-			newLine =  c == '\n'
-			if newLine and c == "#":
-				self.__tokens.append(["HEADING", ""])
-				self.__tokens[len(self.__tokens) - 1][1] += "#"
-				continueTo = "\n"
-				continue
-			#if
-		#for
-
-			newLine = False
-		print(self.__tokens)
-	# tokenize
-
-	def parse(self):
-		"""
-		Parses the text provided to the constructor. Will generate a list of references if any
-		exist.
-		""" # TODO
-		self.__outputStr = self.__inputStr
-	#parse
-
-	def getReferences(self) -> list[str]:
-		"""
-		TODO
-		"""
-		return [self.__parts[r] for r in self.__indexsOfRefs] # TODO
-	#getReferences
-
-	def setReferences(self, refs: list[str]):
-		"""
-		TODO
-		"""
-		for i in range(len(refs)):
-			self.__parts[self.__indexsOfRefs[i]] = refs[i]
-		#for
-	#setReferences
-
-	def getOutput(self) -> str:
-		"""
-		TODO
-		"""
-		return self.__outputStr # TODO
-	#getOutput
-#__Parser
+	#parseImports
 

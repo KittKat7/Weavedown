@@ -27,7 +27,16 @@ NOTES:
 processed files are stored in ./out/...
 Takes the directory as the parameter, if none provided, currect '.' dir
 The list of files is a list of relative paths for the files
+
+
+generate output folder directories
+copy files to output directory, if md file, parse to html
+go through files and look for imports, if it contains an import, replace it with the referenced file
+
 """
+
+
+
 
 import sys, subprocess, os
 from weavedown import Generator
@@ -36,12 +45,20 @@ def main():
 	"""
 	The main function to run weavedown.
 	"""
+	# TODO add better param handling
+	if len(sys.argv) < 2:
+		sys.exit("ERROR: Missing in directory")
+	if len(sys.argv) < 3:
+		sys.exit("ERROR: Missing out directory")
 
-	directory: str = sys.argv[1] if len(sys.argv) > 1 else "."
+	directory: str = sys.argv[1]
+	outDirectory: str = sys.argv[2]
 
-	parser: Generator = Generator(directory, directory+"/out")
+	parser: Generator = Generator(directory, outDirectory)
 
-	parser.generate()
+	parser.generateDirectories()
+	parser.generateFiles()
+	parser.parseImports()
 
 #main
 
