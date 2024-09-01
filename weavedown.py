@@ -36,12 +36,28 @@ class Generator:
 		return files
 	#__getFiles
 
+	@staticmethod
+	def __getFileExtension(path: str) -> str:
+		"""
+		
+		"""
+		return path.split(".")[len(path.split("."))-1]
+	#getFileExtension
+
+	@staticmethod
+	def __setFileExtension(path: str, extension: str) -> str:
+		"""
+		
+		"""
+		return path[:-len(path.split(".")[len(path.split("."))-1])] + extension
+	#getFileExtension
+
 	def generateDirectories(self):
 		"""
 		"""
 		while len(self.dirs) > 0:
-			if not os.path.exists(os.path.join(self.outDir, self.dirs[0][len(self.dir) + 1:])):
-				os.makedirs(os.path.join(self.outDir, self.dirs[0][len(self.dir) + 1:]))
+			if not os.path.exists(os.path.join(self.outDir, self.dirs[0][len(self.dir):])):
+				os.makedirs(os.path.join(self.outDir, self.dirs[0][len(self.dir):]))
 			self.dirs.remove(self.dirs[0])
 		#while
 
@@ -61,15 +77,15 @@ class Generator:
 		while len(files) > 0:
 			filestr: str = files.pop()
 			data: object
-			if filestr.split(".")[len(filestr.split("."))-1] in ["mdhtml"]:
+			if Generator.__getFileExtension(filestr) in ["mdhtml"]:
 				with open(filestr, "r") as file:
 					data = file.read()
-				with open(os.path.join(self.outDir, filestr[len(self.dir) + 1:-7] + ".html"), "w") as file:
+				with open(os.path.join(self.outDir, Generator.__setFileExtension(filestr, "html")[len(self.dir):]), "w") as file:
 					file.write("<!-- Compiled by WeaveDown -->\n" + data)
 			else:
 				with open(filestr, "rb") as file:
 					data = file.read()
-				with open(os.path.join(self.outDir, filestr[len(self.dir) + 1:]), "wb") as file:
+				with open(os.path.join(self.outDir, filestr[len(self.dir):]), "wb") as file:
 					file.write(data)
 	#generateFiles
 
@@ -78,11 +94,11 @@ class Generator:
 		"""
 		files: list[str] = list.copy(self.files)
 		while len(files) > 0:
-			filestr: str = os.path.join(self.outDir, files.pop()[len(self.dir) + 1:])
-			if filestr.split(".")[len(filestr.split("."))-1] not in ["mdhtml", "html", "md", "css", "js", "txt"]:
+			filestr: str = os.path.join(self.outDir, files.pop()[len(self.dir):])
+			if Generator.__getFileExtension(filestr) not in ["mdhtml", "html", "md", "css", "js", "txt"]:
 				continue
-			if filestr[-7:] == ".mdhtml":
-				filestr = filestr[:-7] + ".html"
+			if Generator.__getFileExtension(filestr) == "mdhtml":
+				filestr = Generator.__setFileExtension(filestr, "html")
 
 			print("Checking " + filestr + " for imports")
 
@@ -93,8 +109,8 @@ class Generator:
 					path: str = search.group(1) # type: ignore
 					if path.startswith("./"):
 						path = os.path.join(self.outDir, path[2:])
-					if path[-7:] == ".mdhtml":
-						path = path[:-7] + ".html"
+					if Generator.__getFileExtension(path) == "mdhtml":
+						path = Generator.__setFileExtension(path, "html")
 
 					importedData: str
 					with open(path, "r") as imported:
