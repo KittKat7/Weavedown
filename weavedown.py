@@ -49,7 +49,7 @@ class Generator:
 		"""
 		
 		"""
-		return path[:-len(path.split(".")[len(path.split("."))-1])] + extension
+		return path[:-len(Generator.__getFileExtension(path))] + extension
 	#getFileExtension
 
 	def generateDirectories(self):
