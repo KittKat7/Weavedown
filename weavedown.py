@@ -81,7 +81,7 @@ class Generator:
 				with open(filestr, "r") as file:
 					data = file.read()
 				with open(os.path.join(self.outDir, Generator.__setFileExtension(filestr, "html")[len(self.dir):]), "w") as file:
-					file.write("<!-- Compiled by WeaveDown -->\n" + data)
+					file.write("<!-- Compiled by Weavedown -->\n" + data)
 			else:
 				with open(filestr, "rb") as file:
 					data = file.read()
@@ -117,7 +117,7 @@ class Generator:
 						importedData = imported.read()
 
 					data = re.sub(rf'!\[.*?\]\({re.escape(search.group(1))}\)', # type: ignore
-						"<!-- Imported by WeaveDown -->" + importedData + "<!-- End Import -->", data)
+						"<!-- Imported by Weavedown -->" + importedData + "<!-- End Import -->", data)
 
 					print(path)
 			

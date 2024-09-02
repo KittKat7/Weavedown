@@ -1,1 +1,1 @@
-Install / uninstall `bash <(curl https://raw.githubusercontent.com/KittKat7/Weavedown/main/update.sh)`
+Install / uninstall `bash <(curl https://raw.githubusercontent.com/KittKat7/weavedown/main/update.sh)`
